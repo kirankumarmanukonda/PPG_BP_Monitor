@@ -5,19 +5,69 @@
 #define SCREEN_HEIGHT 240
 
 // Graph dimensions and position
-#define GRAPH_X 50
-#define GRAPH_Y 100
-#define GRAPH_WIDTH 270
+#define GRAPH_X 0
+#define GRAPH_Y 50
+#define GRAPH_WIDTH 320
 #define GRAPH_HEIGHT 140
 
 // Define the maximum number of ppg_data points to display on the screen
 #define MAX_POINTS GRAPH_WIDTH
 
 // Pressure Reading box
-#define BP_BOX_X 0
-#define BP_BOX_Y 0
+#define BP_BOX_X 70
+#define BP_BOX_Y 5
+#define PPG_BOX_X  BP_BOX_X + 100
+#define PPG_BOX_Y BP_BOX_Y
 
 int ppg_data[MAX_POINTS]; // Array to hold ppg_data points
+
+void initialize_BP_PPG_display()
+{
+  // Draw the BP value and a Box
+  tft.setCursor(BP_BOX_X, BP_BOX_Y);  // Set position (x,y)
+  tft.setTextColor(0x07FF);  // Set color of text. First is the color of text and after is color of background
+  tft.setTextSize(1);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+  tft.println("     BP ");
+  //tft.drawRoundRect(BP_BOX_X, BP_BOX_Y + 20, 45, 45, 8, 0x07FF);
+
+  tft.setCursor(BP_BOX_X + 5, BP_BOX_Y + 15);
+  tft.setTextSize(3); 
+  tft.println("-98");
+  
+
+  // Draw the PPG value and a Box
+  tft.setCursor(PPG_BOX_X, PPG_BOX_Y);  // Set position (x,y)
+  tft.setTextColor(ILI9341_DARKGREEN);  // Set color of text. First is the color of text and after is color of background
+  tft.setTextSize(1);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+  tft.println("   PPG");
+  //tft.drawRoundRect(PPG_BOX_X, PPG_BOX_Y + 20, 45, 45, 8, ILI9341_DARKGREEN);
+
+  tft.setCursor(PPG_BOX_X + 5, PPG_BOX_Y + 15);
+  tft.setTextSize(3); 
+  tft.println("---");
+}
+
+int selected = 1;
+void menu()
+{
+  //tft.drawLine(0, SCREEN_HEIGHT - 39 , SCREEN_WIDTH, SCREEN_HEIGHT - 39, ILI9341_WHITE);
+  
+  //tft.drawRoundRect(0, SCREEN_HEIGHT - 40, 50, 40, 5, ILI9341_BLUE);
+  int gap = 10;
+  int menu_x = 20;
+  int menu_width = 50;
+  int menu_height = 40;
+  for(int i = 0; i < 5; i++)
+  {
+    if(selected == i)
+      tft.fillRoundRect(i*menu_width + i*gap + menu_x, SCREEN_HEIGHT - menu_height, menu_width, menu_height, 10, ILI9341_BLUE);
+    else
+      tft.fillRoundRect(i*menu_width + i*gap + menu_x, SCREEN_HEIGHT - menu_height, menu_width, menu_height, 10, ILI9341_DARKGREY);
+  }
+  //tft.drawBitmap();
+  //tft.drawRGBBitmap();
+
+}
 
 // Function declarations
 void drawAxes();
@@ -32,79 +82,63 @@ void setup()
   pinMode(32, OUTPUT);
   digitalWrite(32, 1);
 
-  // For PPG sensor
+  // For PPG sensor GND
   pinMode(14, OUTPUT);
   digitalWrite(14, 0);
 
+  // For PPG sensor VCC
   pinMode(27, OUTPUT);
   digitalWrite(27, 1);
   
+  // For PPG sensor Signal
   pinMode(26, INPUT);
-
-  initialize_plot();
 
   //Initialize the display
   tft.begin();
   tft.setRotation(1); // Set display rotation
   tft.fillScreen(ILI9341_BLACK); // Fill screen with black
   
-  // Draw the BP value and a Box
-  tft.setCursor(BP_BOX_X, BP_BOX_Y);  // Set position (x,y)
-  tft.setTextColor(0x07FF);  // Set color of text. First is the color of text and after is color of background
-  tft.setTextSize(2);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
-  tft.println(" BP ");
-  tft.drawRoundRect(BP_BOX_X, BP_BOX_Y + 20, 50, 50, 8, 0x07FF);
+  initialize_BP_PPG_display();
+  menu();
 
-  tft.setCursor(BP_BOX_X + 10, BP_BOX_Y + 40);
-  tft.setTextSize(2); 
-  tft.println("900");
-  
   // Draw initial axes
-  //drawAxes();
+  drawAxes();
 }
 
-int X0 = GRAPH_X, X1, Y0, Y1, sample;
-void loop() 
+
+
+int X0 = GRAPH_X;
+int Y0 = GRAPH_HEIGHT + GRAPH_Y;
+int X1, Y1, sample, sensor_value;
+void loop()
 {
-  //static float angle = 90.0; // Initial angle for sine wave
-  // Generate a new sine wave value
-  //int newValue = GRAPH_Y + GRAPH_HEIGHT / 2 + (sin(angle) * (GRAPH_HEIGHT / 2)); // Sine wave mapped to graph height
-  //angle += 0.1; // Increment angle for next point
+  sensor_value = analogRead(26);
+  
+  if(sample % 5 == 1)
+  {
+    tft.fillRoundRect(PPG_BOX_X, PPG_BOX_Y + 10, 80, 60, 0, ILI9341_BLACK);
+    tft.setCursor(PPG_BOX_X + 5, PPG_BOX_Y + 15);
+    tft.setTextSize(3); 
+    tft.println(sensor_value);
+  }
+  
+  tft.drawRect(X0 + 2, GRAPH_Y, 5, GRAPH_HEIGHT + 1, ILI9341_BLACK); // Draw rectangle (x,y,width,height,color)
+  newValue = map(sensor_value, 0, 4096, GRAPH_HEIGHT + GRAPH_Y, GRAPH_Y);
+  
+  X1 = sample + GRAPH_X;
+  Y1 = newValue;
+  tft.drawLine(X0, Y0, X1, Y1, ILI9341_DARKGREEN);
+  X0 = X1;
+  Y0 = Y1;
 
-  /*
-  newValue = map(analogRead(26), 0, 4096, GRAPH_HEIGHT + GRAPH_Y, GRAPH_Y);
+  sample++;
 
-  // Erase the previous graph by drawing it in black
-  plotGraph(1);
-
-  // Shift the previous ppg_data points to the left
-  for (int i = 0; i < MAX_POINTS - 1; i++) 
-    ppg_data[i] = ppg_data[i + 1];
-
-  // Add the new value to the array
-  ppg_data[MAX_POINTS - 1] = newValue;
-
-  // Plot the new graph
-  plotGraph(0);
-  */
- 
- tft.drawRect(X0+1, GRAPH_Y, 5, GRAPH_HEIGHT, ILI9341_BLACK);  // Draw rectangle (x,y,width,height,color)
-
- newValue = map(analogRead(26), 0, 4096, GRAPH_HEIGHT + GRAPH_Y, GRAPH_Y);
- 
- X1 = sample + GRAPH_X;
- Y1 = newValue;
- tft.drawLine(X0, Y0, X1, Y1, ILI9341_RED);
- X0 = X1;
- Y0 = Y1;
-
- sample++;
- 
- if(sample == MAX_POINTS)
- {
-  sample = 0;
-  X0 = 0;
- }
+  if (sample == MAX_POINTS)
+  {
+    sample = 0;
+    X0 = GRAPH_X;
+    tft.drawRect(X0, GRAPH_Y, 5, GRAPH_HEIGHT, ILI9341_BLACK);
+  }
 
   delay(10);
 }
