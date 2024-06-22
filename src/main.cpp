@@ -63,6 +63,7 @@ void setup()
   //drawAxes();
 }
 
+int X0 = GRAPH_X, X1, Y0, Y1, sample;
 void loop() 
 {
   //static float angle = 90.0; // Initial angle for sine wave
@@ -70,6 +71,7 @@ void loop()
   //int newValue = GRAPH_Y + GRAPH_HEIGHT / 2 + (sin(angle) * (GRAPH_HEIGHT / 2)); // Sine wave mapped to graph height
   //angle += 0.1; // Increment angle for next point
 
+  /*
   newValue = map(analogRead(26), 0, 4096, GRAPH_HEIGHT + GRAPH_Y, GRAPH_Y);
 
   // Erase the previous graph by drawing it in black
@@ -84,8 +86,27 @@ void loop()
 
   // Plot the new graph
   plotGraph(0);
-  
+  */
+ 
+ tft.drawRect(X0+1, GRAPH_Y, 5, GRAPH_HEIGHT, ILI9341_BLACK);  // Draw rectangle (x,y,width,height,color)
 
+ newValue = map(analogRead(26), 0, 4096, GRAPH_HEIGHT + GRAPH_Y, GRAPH_Y);
+ 
+ X1 = sample + GRAPH_X;
+ Y1 = newValue;
+ tft.drawLine(X0, Y0, X1, Y1, ILI9341_RED);
+ X0 = X1;
+ Y0 = Y1;
+
+ sample++;
+ 
+ if(sample == MAX_POINTS)
+ {
+  sample = 0;
+  X0 = 0;
+ }
+
+  delay(10);
 }
 
 void drawAxes() 
