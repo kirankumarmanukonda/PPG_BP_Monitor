@@ -3,6 +3,8 @@
 #include <bitmaps.h>
 
 int selected = 1;
+// 1  -> storing ppg and bp
+// 0  -> Not storing
 int ppg_record;
 
 void initialize_BP_PPG_display()
@@ -60,7 +62,14 @@ void menu()
     else if(i == 2)
     {
         if(!ppg_record)
+        {
             tft.fillCircle(x + 25, y + 20, 17, ILI9341_RED);
+            //tft.fillCircle(x + 25, y + 20, 17, ILI9341_RED);
+            tft.setTextColor(ILI9341_BLUE);
+            tft.setTextSize(1);
+            tft.setCursor(x + 17 , y + 17);
+            tft.print("REC");
+        }
         else
         {
             if(selected == i)
@@ -72,6 +81,8 @@ void menu()
     
   }
   
+  // for BP and PPG readings
+  tft.setTextSize(3);
 
 }
 
@@ -99,4 +110,17 @@ void loading_screen()
     delay(1000);
     
     tft.fillScreen(ILI9341_BLACK);
+}
+
+void show_ppg_bp(int sample, int ppg_value, int bp)
+{
+    tft.setTextColor(ILI9341_DARKGREEN);
+    tft.fillRoundRect(PPG_BOX_X, PPG_BOX_Y + 10, 80, 30, 0, ILI9341_BLACK);
+    tft.setCursor(PPG_BOX_X + 5, PPG_BOX_Y + 15);
+    tft.println(ppg_value);
+
+    tft.setTextColor(ILI9341_CYAN);
+    tft.fillRoundRect(BP_BOX_X, BP_BOX_Y + 10, 80, 30, 0, ILI9341_BLACK);
+    tft.setCursor(BP_BOX_X + 10, BP_BOX_Y + 15);
+    tft.println(bp);
 }

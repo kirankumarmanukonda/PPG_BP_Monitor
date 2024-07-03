@@ -1,25 +1,9 @@
 #include <main.h>
-#include <gui.h>
-#include <Wire.h>
-#include "Adafruit_MPRLS.h"
-
-//Pressure sensor Configurations
-// You dont *need* a reset and EOC pin for most uses, so we set to -1 and don't connect
-#define RESET_PIN -1  // set to any GPIO pin # to hard-reset on begin()
-#define EOC_PIN -1    // set to any GPIO pin to read end-of-conversion by pin
-#define BP_SDA 21     // GPIO of SDA for I2C
-#define BP_SCL 22     // GPIO of SCL for I2C
-
-Adafruit_MPRLS mpr = Adafruit_MPRLS(RESET_PIN, EOC_PIN);
-
-#define PPG_PIN 26
-
-// PPG , BP
-int ppg_data[2][MAX_POINTS]; // Array to hold ppg_data points
-int sample, ppg_value;
 
 void setup() 
 {
+  Serial.begin(115200);
+
   // Setup Button OK
   pinMode(OK_BUTTON_PIN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(OK_BUTTON_PIN), handleOKPress, FALLING);
@@ -59,15 +43,21 @@ void setup()
   
   initialize_BP_PPG_display();
   
-  // Draw initial axes
-  //drawAxes();
+  // Draw initial axes or boundaries
+  drawAxes();
 
-  // for BP and PPG readings
-  tft.setTextSize(3);
+
 }
 
+int record_sample = 0;
 
-uint32_t bp;
+// Total number of sample recorded
+int total_record_samples;
+
+// screen for the total_record_samples
+int record_screens;
+
+uint32_t bp_value;
 float pressure_hPa;
 void loop()
 {
@@ -76,13 +66,31 @@ void loop()
     OK_Pressed = false;
     if(selected == 1)
     {
-      ppg_record = 0;
+      clear_graph();
 
+      ppg_record = 0;
+      sample = 0;
+      record_sample = 0;
+      history_flag = 0;
     }
     else if(selected == 2)
     {
       if(ppg_record)
+      {
         ppg_record = 0;
+        history_flag = 1;
+
+        total_record_samples = record_sample;
+        sample = 0;
+        record_sample = 0;
+        
+        record_screens = ceil((double)total_record_samples/MAX_POINTS);
+        
+        clear_graph();
+        draw_graph_screen(record_screens, ppg_bp_data, total_record_samples);
+        show_ppg_bp(sample, ppg_bp_data[0][total_record_samples], ppg_bp_data[1][total_record_samples]);
+
+      }
       else
         ppg_record = 1;
     }
@@ -92,48 +100,86 @@ void loop()
   if(RIGHT_Pressed)
   {
     RIGHT_Pressed = false;
-    selected++;
     
-    if(selected == 3)
-      selected = 1;
-    
-    menu();
-    //delay(50);
+    if(history_flag)
+    {
+      sample++;
+      //draw_indicator_line(sample);
+      draw_graph(tft, ppg_bp_data[0][sample]);
+      show_ppg_bp(sample, ppg_bp_data[0][sample], ppg_bp_data[1][sample]);
+    }
+    else
+    {
+      selected++;
+
+      if (selected == 3)
+        selected = 1;
+
+      menu();
+    }
   }
   if(LEFT_Pressed)
   {
     LEFT_Pressed = false;
-    selected--;
     
-    if(selected == 0)
-      selected = 2;
-    
-    menu();
-    //delay(1000);
+    if(history_flag)
+    {
+      sample--;
+      //draw_indicator_line(sample);
+      draw_graph(tft, ppg_bp_data[0][sample]);
+      show_ppg_bp(sample, ppg_bp_data[0][sample], ppg_bp_data[1][sample]);
+
+    }
+    else
+    {
+      selected--;
+
+      if (selected == 0)
+        selected = 2;
+
+      menu();
+    }
   }
   
-  ppg_value = analogRead(PPG_PIN);
-  pressure_hPa = mpr.readPressure();
-  bp = -6.6417940048614935e+002 + 7.3911993532291342e-001 * pressure_hPa + 8.9635671910610964e-007 * pressure_hPa * pressure_hPa;
-  
-  //if(ppg_record)
-  //  ppg_data[sample] = ppg_value;
-  
-  draw_graph(tft, ppg_value);
-
-    if(sample % 5 == 1)
+  if(history_flag)
   {
-    tft.setTextColor(ILI9341_DARKGREEN);
-    tft.fillRoundRect(PPG_BOX_X, PPG_BOX_Y + 10, 80, 35, 0, ILI9341_BLACK);
-    tft.setCursor(PPG_BOX_X + 5, PPG_BOX_Y + 15); 
-    tft.println(ppg_value);
-
-    tft.setTextColor(ILI9341_CYAN);
-    tft.fillRoundRect(BP_BOX_X, BP_BOX_Y + 10, 80, 35, 0, ILI9341_BLACK);
-    tft.setCursor(BP_BOX_X + 10, BP_BOX_Y + 15); 
-    tft.println(bp);
+    
+    /*
+    if(record_sample < total_record_samples)
+    {
+      draw_graph(tft, ppg_bp_data[0][sample]);
+      show_ppg_bp(sample, ppg_bp_data[0][sample], ppg_bp_data[1][sample]);
+      record_sample++;
+    }
+    else if(record_sample == total_record_samples)
+    {
+      sample = 0;
+      draw_indicator_line(sample);
+      record_sample++;
+      
+    }
+    */
+    
   }
+  else
+  {
+    ppg_value = analogRead(PPG_PIN);
+    pressure_hPa = mpr.readPressure();
+    bp_value = -6.6417940048614935e+002 + 7.3911993532291342e-001 * pressure_hPa + 8.9635671910610964e-007 * pressure_hPa * pressure_hPa;
 
-  delay(10);
+    if(ppg_record)
+    {
+      ppg_bp_data[0][record_sample] = ppg_value;
+      ppg_bp_data[1][record_sample] = bp_value;
+      record_sample++;
+    }
+    draw_graph(tft, ppg_value);
+    
+    // only show for each 5 samples to make is visible on screen
+    if (sample % 5 == 1)
+      show_ppg_bp(sample, ppg_value, bp_value);
+
+    delay(10);
+  }
 }
 

@@ -1,7 +1,7 @@
 #include <graph.h>
 
-// count the number of samples
 extern int sample;
+extern int history_flag;
 
 // calculated in the MAX_POINTS
 int max_value; int max_graph_value = 4096;
@@ -19,6 +19,7 @@ int newValue;
 
 void drawAxes() 
 {
+    tft.drawRect(GRAPH_X, GRAPH_Y-1, GRAPH_WIDTH, GRAPH_HEIGHT + 5, ILI9341_BLUE);
   //tft.drawLine(GRAPH_X, GRAPH_Y + GRAPH_HEIGHT, GRAPH_X + GRAPH_WIDTH, GRAPH_Y + GRAPH_HEIGHT, ILI9341_WHITE); // X-axis
   //tft.drawLine(GRAPH_X, GRAPH_Y + GRAPH_HEIGHT, GRAPH_X, GRAPH_Y, ILI9341_WHITE);  // Y-axis
 }
@@ -27,7 +28,7 @@ void drawAxes()
 void draw_graph(Adafruit_ILI9341 tft, int sensor_value)
 {
     // clear the small Screen before plotin the new point
-    tft.drawRect(X0 + 2, GRAPH_Y, 5, GRAPH_HEIGHT + 1, ILI9341_BLACK); // Draw rectangle (x,y,width,height,color)
+    tft.drawFastVLine(X0 + 2, GRAPH_Y, GRAPH_HEIGHT + 1, ILI9341_BLACK);
     
     // Map the sensor value to the Graph pixels in screen
     newValue = map(sensor_value, min_graph_value, max_graph_value, GRAPH_HEIGHT + GRAPH_Y, GRAPH_Y);
@@ -53,7 +54,8 @@ void draw_graph(Adafruit_ILI9341 tft, int sensor_value)
     if (sensor_value < min_value)
         min_value = sensor_value;
 
-    sample++;
+    // if(!history_flag)
+        sample++;
 
     if (sample == MAX_POINTS)
     {
@@ -76,4 +78,42 @@ void draw_graph(Adafruit_ILI9341 tft, int sensor_value)
         max_value = 0;
         min_value = 4096;
     }
+}
+
+
+void draw_graph_screen(int screen_no, int ppg_bp_data[2][MAX_POINTS * MAX_REC_SCREENS], int total_samples)
+{
+    sample = 0;
+    int index, indicator_sample;
+    for(int i = 0; i < MAX_POINTS; i++)
+    {
+        index = i*screen_no;
+        if(index < total_samples)
+        {
+            draw_graph(tft, ppg_bp_data[0][index]);
+        }
+        else if(index == total_samples)
+            indicator_sample = i;
+    }
+
+    draw_indicator_line(indicator_sample);
+    Serial.print("Scren graph printed !");
+
+}
+
+void clear_graph()
+{
+    tft.fillRect(GRAPH_X, GRAPH_Y, GRAPH_WIDTH, GRAPH_HEIGHT + 2, ILI9341_BLACK);
+    X0 = GRAPH_X;
+    Y0 = GRAPH_HEIGHT + GRAPH_Y;
+    X1 = 0; Y1 = 0;
+    delay(1000);
+}
+
+int old_sample;
+void draw_indicator_line(int sample)
+{
+    tft.drawFastVLine(old_sample, GRAPH_Y, GRAPH_HEIGHT, ILI9341_BLACK);
+    tft.drawFastVLine(sample, GRAPH_Y, GRAPH_HEIGHT, ILI9341_WHITE);
+    old_sample = sample;
 }

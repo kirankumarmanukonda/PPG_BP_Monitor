@@ -18,5 +18,6 @@ extern int ppg_record;
 void initialize_BP_PPG_display();
 void menu();
 void loading_screen();
+void show_ppg_bp(int sample, int ppg_value, int bp);
 
 #endif
