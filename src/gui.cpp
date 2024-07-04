@@ -78,6 +78,13 @@ void menu()
                 tft.drawBitmap(x + 8, y + 3, stop_logo, 35, 35, ILI9341_DARKGREY, ILI9341_RED);
         }
     }
+    else if(i == 3)
+    {
+        if(selected == i)
+            tft.drawBitmap(x + 8, y + 3, report_logo, 35, 35, ILI9341_CYAN, ILI9341_MAROON);
+        else 
+            tft.drawBitmap(x + 8, y + 3, report_logo, 35, 35, ILI9341_DARKGREY, ILI9341_MAROON);
+    }
     
   }
   

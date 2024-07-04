@@ -61,8 +61,17 @@ uint32_t bp_value;
 float pressure_hPa;
 void loop()
 {
+  validate_singleClick();
+
+  if (OK_LongPressed)
+  {
+    OK_LongPressed = false;
+    Serial.println("Long press detected");
+    // Perform action for long press
+   }
   if(OK_Pressed)
   {
+    Serial.println("single ");
     OK_Pressed = false;
     if(selected == 1)
     {
@@ -95,7 +104,25 @@ void loop()
         ppg_record = 1;
     }
     menu();
-    //delay(200);
+  }
+  if(OK_DoubleClicked)
+  {
+    OK_DoubleClicked = false;
+
+    selected = 1;
+    menu();
+
+    /*
+    clear_graph();
+
+    ppg_record = 0;
+    sample = 0;
+    record_sample = 0;
+    history_flag = 0;
+      
+    */
+
+    Serial.println("double ");
   }
   if(RIGHT_Pressed)
   {
@@ -112,7 +139,7 @@ void loop()
     {
       selected++;
 
-      if (selected == 3)
+      if (selected == 4)
         selected = 1;
 
       menu();
@@ -135,7 +162,7 @@ void loop()
       selected--;
 
       if (selected == 0)
-        selected = 2;
+        selected = 3;
 
       menu();
     }
