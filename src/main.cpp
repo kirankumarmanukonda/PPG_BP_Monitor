@@ -6,19 +6,16 @@ void setup()
 
   // Setup Button OK
   pinMode(OK_BUTTON_PIN, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(OK_BUTTON_PIN), handleOKPress, FALLING);
+  attachInterrupt(digitalPinToInterrupt(OK_BUTTON_PIN), handleOKPress, CHANGE);
 
-  // Setup Button LEFT
-  pinMode(LEFT_BUTTON_PIN, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(LEFT_BUTTON_PIN), handleLEFTPress, FALLING);
+  //Setup Rotary Encoder A
+  pinMode(ROT_A, INPUT);
+  attachInterrupt(digitalPinToInterrupt(ROT_A), rotary_handler, CHANGE);
 
-  // Setup Button RIGHT
-  pinMode(RIGHT_BUTTON_PIN, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(RIGHT_BUTTON_PIN), handleRIGHTPress, FALLING);
-
-  //Turn on the LED of Display
-  pinMode(32, OUTPUT);
-  digitalWrite(32, 1);
+  // Setup Rotary Encoder B
+  pinMode(ROT_B, INPUT);
+  attachInterrupt(digitalPinToInterrupt(ROT_B), rotary_handler, CHANGE);
+  aLastState = digitalRead(ROT_A);
   
   //Initialize the display
   tft.begin();
@@ -49,31 +46,109 @@ void setup()
 
 }
 
+// A varible to count recorded samples
 int record_sample = 0;
 
 // Total number of sample recorded
 int total_record_samples;
 
-// screen for the total_record_samples
+// screen for the total_record_samples ranges from 1 to n
 int record_screens;
+
+// current showing screen
+int current_screen;
 
 uint32_t bp_value;
 float pressure_hPa;
 void loop()
 {
-  validate_singleClick();
-
   if (OK_LongPressed)
   {
     OK_LongPressed = false;
-    Serial.println("Long press detected");
-    // Perform action for long press
-   }
+    if(history_flag)
+    {
+      // history_flag = 0;
+      
+      // rot_count = 1;
+      // clear_graph();
+      // menu();
+    }
+    //Serial.println("Long press");
+  }
+
+  if(rot_flag)
+  {
+    rot_flag = false;
+    
+    if(history_flag)
+    {
+      // adjust the counter in a range 0 to MAX_POINTS
+      if (rot_count > MAX_POINTS)
+      {
+        if(current_screen <= record_screens)
+        {
+          if(current_screen != record_screens)
+            current_screen++;
+          
+          rot_count = 0;
+          clear_graph();
+          draw_graph_screen(current_screen, ppg_bp_data, total_record_samples);
+
+        }
+      }
+
+      else if (rot_count < 0)
+      {
+        if(current_screen >= 1)
+        {
+          if(current_screen != 1)
+          {
+            current_screen--;
+            rot_count = MAX_POINTS;
+          }
+          
+          clear_graph();
+          draw_graph_screen(current_screen, ppg_bp_data, total_record_samples);
+        }
+        
+      }
+      
+      // show the indicator, graph and bp value at the particular index
+      int index = rot_count + (current_screen - 1) * MAX_POINTS;
+
+      // To constrain the index in a range 0 to total max points
+      if(index <= total_record_samples && index > 0)
+      {
+        draw_indicator_line(rot_count, 1);
+        show_ppg_bp(rot_count, ppg_bp_data[0][index], ppg_bp_data[1][index]);
+      }
+      else if(index == total_record_samples + 1)
+      {
+        rot_count = rot_count - 1;
+        draw_indicator_line(rot_count, 1);
+      }
+      else if(index <= 0)
+      {
+        rot_count = 0;
+        draw_indicator_line(rot_count, 1);
+      }
+    }
+    else
+    {
+      // adjust the counter in a range 1 to 3
+      if (rot_count > 3)
+        rot_count = 1;
+      else if (rot_count < 1)
+        rot_count = 3;
+      
+      menu();
+    }
+  }
+  
   if(OK_Pressed)
   {
-    Serial.println("single ");
     OK_Pressed = false;
-    if(selected == 1)
+    if(rot_count == 1)
     {
       clear_graph();
 
@@ -82,10 +157,12 @@ void loop()
       record_sample = 0;
       history_flag = 0;
     }
-    else if(selected == 2)
+    else if(rot_count == 2)
     {
       if(ppg_record)
       {
+        store_extreme();
+
         ppg_record = 0;
         history_flag = 1;
 
@@ -94,101 +171,26 @@ void loop()
         record_sample = 0;
         
         record_screens = ceil((double)total_record_samples/MAX_POINTS);
-        
+
+        // assign last screen to current screen
+        current_screen = record_screens;
+
         clear_graph();
-        draw_graph_screen(record_screens, ppg_bp_data, total_record_samples);
+        draw_graph_screen(current_screen, ppg_bp_data, total_record_samples);
         show_ppg_bp(sample, ppg_bp_data[0][total_record_samples], ppg_bp_data[1][total_record_samples]);
 
       }
       else
         ppg_record = 1;
     }
+    else if(rot_count == 3)
+    {
+      Serial.println("Report is generated..!");
+    }
     menu();
   }
-  if(OK_DoubleClicked)
-  {
-    OK_DoubleClicked = false;
 
-    selected = 1;
-    menu();
-
-    /*
-    clear_graph();
-
-    ppg_record = 0;
-    sample = 0;
-    record_sample = 0;
-    history_flag = 0;
-      
-    */
-
-    Serial.println("double ");
-  }
-  if(RIGHT_Pressed)
-  {
-    RIGHT_Pressed = false;
-    
-    if(history_flag)
-    {
-      sample++;
-      //draw_indicator_line(sample);
-      draw_graph(tft, ppg_bp_data[0][sample]);
-      show_ppg_bp(sample, ppg_bp_data[0][sample], ppg_bp_data[1][sample]);
-    }
-    else
-    {
-      selected++;
-
-      if (selected == 4)
-        selected = 1;
-
-      menu();
-    }
-  }
-  if(LEFT_Pressed)
-  {
-    LEFT_Pressed = false;
-    
-    if(history_flag)
-    {
-      sample--;
-      //draw_indicator_line(sample);
-      draw_graph(tft, ppg_bp_data[0][sample]);
-      show_ppg_bp(sample, ppg_bp_data[0][sample], ppg_bp_data[1][sample]);
-
-    }
-    else
-    {
-      selected--;
-
-      if (selected == 0)
-        selected = 3;
-
-      menu();
-    }
-  }
-  
-  if(history_flag)
-  {
-    
-    /*
-    if(record_sample < total_record_samples)
-    {
-      draw_graph(tft, ppg_bp_data[0][sample]);
-      show_ppg_bp(sample, ppg_bp_data[0][sample], ppg_bp_data[1][sample]);
-      record_sample++;
-    }
-    else if(record_sample == total_record_samples)
-    {
-      sample = 0;
-      draw_indicator_line(sample);
-      record_sample++;
-      
-    }
-    */
-    
-  }
-  else
+  if(!history_flag)
   {
     ppg_value = analogRead(PPG_PIN);
     pressure_hPa = mpr.readPressure();
@@ -200,13 +202,14 @@ void loop()
       ppg_bp_data[1][record_sample] = bp_value;
       record_sample++;
     }
-    draw_graph(tft, ppg_value);
+    draw_graph(tft, ppg_value, 1);
     
     // only show for each 5 samples to make is visible on screen
     if (sample % 5 == 1)
       show_ppg_bp(sample, ppg_value, bp_value);
 
-    delay(10);
+    delay(10);    
   }
+
 }
 

@@ -2,7 +2,6 @@
 #include <tft.h>
 #include <bitmaps.h>
 
-int selected = 1;
 // 1  -> storing ppg and bp
 // 0  -> Not storing
 int ppg_record;
@@ -47,14 +46,14 @@ void menu()
     x = i*menu_width + i*gap + menu_x;
     y = SCREEN_HEIGHT - menu_height;
 
-    if(selected == i)
+    if(rot_count == i)
         tft.fillRoundRect(x, y, menu_width, menu_height, 10, ILI9341_CYAN);
     else
         tft.fillRoundRect(x, y, menu_width, menu_height, 10, ILI9341_DARKGREY);
     
     if(i == 1)
     {
-        if(selected == i)
+        if(rot_count == i)
             tft.drawBitmap(x + 8, y + 3, home, 35, 35, ILI9341_CYAN, ILI9341_BLUE);
         else 
             tft.drawBitmap(x + 8, y + 3, home, 35, 35, ILI9341_DARKGREY, ILI9341_BLUE);
@@ -72,7 +71,7 @@ void menu()
         }
         else
         {
-            if(selected == i)
+            if(rot_count == i)
                 tft.drawBitmap(x + 8, y + 3, stop_logo, 35, 35, ILI9341_CYAN, ILI9341_RED);
             else 
                 tft.drawBitmap(x + 8, y + 3, stop_logo, 35, 35, ILI9341_DARKGREY, ILI9341_RED);
@@ -80,7 +79,7 @@ void menu()
     }
     else if(i == 3)
     {
-        if(selected == i)
+        if(rot_count == i)
             tft.drawBitmap(x + 8, y + 3, report_logo, 35, 35, ILI9341_CYAN, ILI9341_MAROON);
         else 
             tft.drawBitmap(x + 8, y + 3, report_logo, 35, 35, ILI9341_DARKGREY, ILI9341_MAROON);

@@ -11,7 +11,7 @@
 #define PPG_BOX_X  BP_BOX_X + 100
 #define PPG_BOX_Y BP_BOX_Y
 
-extern int selected;
+extern int rot_count;
 extern int ppg_record;
 
 // Function declations

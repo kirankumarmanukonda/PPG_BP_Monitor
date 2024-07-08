@@ -16,8 +16,8 @@
 Adafruit_MPRLS mpr = Adafruit_MPRLS(RESET_PIN, EOC_PIN);
 #define PPG_PIN 26
 
-// PPG , BP
-int ppg_bp_data[2][MAX_POINTS * MAX_REC_SCREENS]; // Array to hold ppg and bp data points
+// Array to hold ppg and bp data points
+int ppg_bp_data[2][MAX_POINTS * MAX_REC_SCREENS]; // PPG , BP
 
 // count the number of samples on screen
 int sample;

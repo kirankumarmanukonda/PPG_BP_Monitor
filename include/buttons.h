@@ -2,147 +2,78 @@
 #define BUTTONS_H
 
 // Button initializations
-#define OK_BUTTON_PIN 14  // GPIO pin for Button 1
-#define LEFT_BUTTON_PIN 12  // GPIO pin for Button 2
-#define RIGHT_BUTTON_PIN 13  // GPIO pin for Button 3
+#define OK_BUTTON_PIN 14  // GPIO pin for Button
 
-volatile bool OK_DoubleClicked = false;
-
-volatile bool OK_Pressed = false;
+volatile bool OK_Pressed = false; // Flag for OK button pressed
 volatile bool OK_LongPressed = false; // Flag for OK button long press
 unsigned long lastDebounceTimeOK = 0; // Last debounce time
-unsigned long pressStartTimeOK = 0;   // Time when button press started
 bool buttonPressed = false;           // State of the button
 
+#define LONG_PRESS_DELAY 1000 // Min delay for long press
+#define DEBOUNCE_DELAY  100  // Debounce time in milliseconds
 
-volatile bool LEFT_Pressed = false;
-volatile bool RIGHT_Pressed = false;
-volatile bool checkForSingleClick = false; 
-
-#define LONG_PRESS_DELAY 1000
-#define DOUBLE_CLICK_DELAY 400 // Max delay between clicks for double click
-const unsigned long debounceDelay = 200;  // Debounce time in milliseconds
-
-
-volatile unsigned long lastDebounceTimeLEFT = 0;
-volatile unsigned long lastDebounceTimeRIGHT = 0;
-
-unsigned long lastPressTimeOK = 0; 
-
-// function continously validate the single click and double click if interrupt occured
-void IRAM_ATTR validate_singleClick()
-{
-    if (checkForSingleClick)
-    {
-        if((millis() - lastPressTimeOK) > DOUBLE_CLICK_DELAY)
-        {
-            OK_Pressed = true;
-            checkForSingleClick = false;
-        }
-    }
-}
-
-
-void IRAM_ATTR handleOKPress() {
-    unsigned long currentTime = millis();
-    
-    // Debounce logic
-    if ((currentTime - lastDebounceTimeOK) > debounceDelay) {
-        // Button is pressed down
-        if (!buttonPressed) {
-            buttonPressed = true;
-            pressStartTimeOK = currentTime;
-        } 
-        // Button is released
-        else {
-            buttonPressed = false;
-            unsigned long pressDuration = currentTime - pressStartTimeOK;
-            
-            if (pressDuration >= LONG_PRESS_DELAY) {
-                OK_LongPressed = true;
-            } else {
-                OK_Pressed = true;
-            }
-        }
-        lastDebounceTimeOK = currentTime;
-    }
-}
-
-/*
 void IRAM_ATTR handleOKPress() 
 {
     unsigned long currentTime = millis();
     
-    if ((currentTime - lastDebounceTimeOK) > debounceDelay) 
+    // Debounce logic
+    if ((currentTime - lastDebounceTimeOK) > DEBOUNCE_DELAY) 
     {
-        if (checkForSingleClick) 
+        //Serial.print("change\n");
+        if (!buttonPressed) 
         {
-            if ((currentTime - lastPressTimeOK) < DOUBLE_CLICK_DELAY) 
+            buttonPressed = true;
+        }
+        else
+        {
+            if((currentTime - lastDebounceTimeOK) > LONG_PRESS_DELAY )
             {
-                OK_DoubleClicked = true; // Double click detected
-                checkForSingleClick = false; // Cancel single click check
+                OK_LongPressed = true;
+                //Serial.print("long");
             }
-        } 
-        else 
-        {
-            checkForSingleClick = true;
-            lastPressTimeOK = currentTime;
+            else
+            {
+                OK_Pressed = true;
+                //Serial.print("short");
+            }
+            
+            buttonPressed = false;
         }
         lastDebounceTimeOK = currentTime;
     }
 }
-*/
-void IRAM_ATTR handleLEFTPress() {
-    unsigned long currentTime = millis();
-    if ((currentTime - lastDebounceTimeLEFT) > debounceDelay) {
-        LEFT_Pressed = true;
-        lastDebounceTimeLEFT = currentTime;
-    }
-}
 
-void IRAM_ATTR handleRIGHTPress() {
-    unsigned long currentTime = millis();
-    if ((currentTime - lastDebounceTimeRIGHT) > debounceDelay) {
-        RIGHT_Pressed = true;
-        lastDebounceTimeRIGHT = currentTime;
-    }
-}
 
-/************************************************
-   for rotary encoder
-   count              -> to count the movements
-   aState, aLastState -> states of the A signal
- ************************************************/
-#define A 0
-#define B 1
+// Rotary encoder Initialization
+#define ROT_A 13 // GPIO pin for Rotary Encoder A
+#define ROT_B 35 // GPIO pin for Rotary Encoder B
 
-int count = 1;
-int aState;
-int aLastState;
+int rot_count = 1;  // To count the movements of rotary encoder
 
-void rot()
+// To get the status of the rot (movement is detected)
+volatile bool rot_flag = false;
+
+//aState, aLastState -> states of the A signal
+int aState, aLastState;
+
+// Decode the rotations in the rotary Knob
+ICACHE_RAM_ATTR void rotary_handler()
 {
-  aState = digitalRead(A);
-  if (aState != aLastState)
-  {
-    if (digitalRead(B) != aState)
+    aState = digitalRead(ROT_A);
+    if (aState != aLastState)
     {
-      count ++;
-      //Serial.println(count);
-    }
-    else
-    {
-      count --;
-    }
+        if (digitalRead(ROT_B) != aState)
+        {
+            rot_count++;
+        }
+        else
+        {
+            rot_count--;
+        }
 
-  }
-  aLastState = aState;
-}
-
-ICACHE_RAM_ATTR void intt()
-{
-    rot();
-    //Serial.println("interruption");
+        rot_flag = true;
+    }
+    aLastState = aState;
 }
 
 #endif
