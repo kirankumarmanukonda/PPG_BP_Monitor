@@ -12,7 +12,7 @@
 // Define the maximum number of ppg_data points to display on the screen
 #define MAX_POINTS GRAPH_WIDTH
 
-#define MAX_REC_SCREENS 5
+#define MAX_REC_SCREENS 15
 
 // Function declarations
 void drawAxes();

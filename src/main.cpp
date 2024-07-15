@@ -1,5 +1,62 @@
 #include <main.h>
 
+#define MOTOR_PIN 32
+#define SOLENOID_PIN 33 
+#define SOLENOID_CHANNEL 0
+
+// A varible to count recorded samples
+int record_sample = 0;
+
+// Total number of sample recorded
+int total_record_samples;
+
+// screen for the total_record_samples ranges from 1 to n
+int record_screens;
+
+// current showing screen
+int current_screen;
+
+uint32_t bp_value;
+float pressure_hPa;
+
+bool start_pump, release;
+unsigned long start_pump_time, release_pump_time;
+
+int prev_bp_val;
+void control_pressure()
+{
+
+/*
+  // write controller
+  int diff = prev_bp_val - bp_value;
+
+  if(diff>5)
+  {
+
+  }
+
+
+  prev_bp_val = bp_value;
+*/
+
+  // Threshold based controlling
+  if(bp_value > 220)
+    ledcWrite(SOLENOID_CHANNEL, 245);
+  else if(bp_value > 180)
+    ledcWrite(SOLENOID_CHANNEL, 247);
+  else if(bp_value > 80)
+    ledcWrite(SOLENOID_CHANNEL, 248);
+  else
+  {
+    ledcWrite(SOLENOID_CHANNEL, 0);
+    OK_Pressed = true;
+  }
+
+
+
+}
+
+
 void setup() 
 {
   Serial.begin(115200);
@@ -19,8 +76,17 @@ void setup()
   
   //Initialize the display
   tft.begin();
-  tft.setRotation(1); // Set display rotation
+  tft.setRotation(3); // Set display rotation
   tft.fillScreen(ILI9341_BLACK); // Fill screen with black to clear Screen
+
+  // Initialize the Air Pump
+  pinMode(MOTOR_PIN, OUTPUT);
+  digitalWrite(MOTOR_PIN, 0);
+
+  // Initialize the Solenoid
+  ledcSetup(SOLENOID_CHANNEL, 5000, 8);
+  ledcAttachPin(SOLENOID_PIN, SOLENOID_CHANNEL);
+  ledcWrite(SOLENOID_CHANNEL, 0);
 
   loading_screen();
   
@@ -46,20 +112,7 @@ void setup()
 
 }
 
-// A varible to count recorded samples
-int record_sample = 0;
 
-// Total number of sample recorded
-int total_record_samples;
-
-// screen for the total_record_samples ranges from 1 to n
-int record_screens;
-
-// current showing screen
-int current_screen;
-
-uint32_t bp_value;
-float pressure_hPa;
 void loop()
 {
   if (OK_LongPressed)
@@ -151,6 +204,11 @@ void loop()
     if(rot_count == 1)
     {
       clear_graph();
+      
+      // Turn off the motor 
+      start_pump = 0;
+      release = 0;
+      digitalWrite(MOTOR_PIN, 0);
 
       ppg_record = 0;
       sample = 0;
@@ -162,6 +220,14 @@ void loop()
       if(ppg_record)
       {
         store_extreme();
+
+        // Turn off the motor 
+        start_pump = 0;
+        release = 0;
+        digitalWrite(MOTOR_PIN, 0);
+
+        // Turn off the Solenoid
+        ledcWrite(SOLENOID_CHANNEL, 0);
 
         ppg_record = 0;
         history_flag = 1;
@@ -181,7 +247,11 @@ void loop()
 
       }
       else
+      {
         ppg_record = 1;
+        start_pump = 1;
+        start_pump_time = millis();
+      }
     }
     else if(rot_count == 3)
     {
@@ -198,6 +268,28 @@ void loop()
 
     if(ppg_record)
     {
+      if(start_pump && millis() > (start_pump_time + 2000))
+      {
+        digitalWrite(MOTOR_PIN, 1);
+        ledcWrite(SOLENOID_CHANNEL, 255);
+        start_pump = 0;
+      }
+
+      if(bp_value >= 250)
+      {
+        digitalWrite(MOTOR_PIN, 0);
+        release = 1;
+        release_pump_time = millis();
+        prev_bp_val = bp_value;
+      }
+      if(release && millis() > (release_pump_time + 3000))
+      {
+        control_pressure();
+      }
+      
+
+      
+
       ppg_bp_data[0][record_sample] = ppg_value;
       ppg_bp_data[1][record_sample] = bp_value;
       record_sample++;
