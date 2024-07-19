@@ -13,6 +13,7 @@
 
 extern int rot_count;
 extern int ppg_record;
+extern int max_bp;
 
 // Function declations
 void initialize_BP_PPG_display();
@@ -20,4 +21,11 @@ void menu();
 void loading_screen();
 void show_ppg_bp(int sample, int ppg_value, int bp);
 
+void setting_screen();
+void save_settings();
+void load_settings();
+void settings_menu();
+void change_max_bp();
+
+void report_screen();
 #endif

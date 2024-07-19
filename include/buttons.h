@@ -48,7 +48,7 @@ void IRAM_ATTR handleOKPress()
 #define ROT_A 13 // GPIO pin for Rotary Encoder A
 #define ROT_B 35 // GPIO pin for Rotary Encoder B
 
-int rot_count = 1;  // To count the movements of rotary encoder
+int rot_count = 0;  // To count the movements of rotary encoder
 
 // To get the status of the rot (movement is detected)
 volatile bool rot_flag = false;

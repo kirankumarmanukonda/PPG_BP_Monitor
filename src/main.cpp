@@ -4,6 +4,14 @@
 #define SOLENOID_PIN 33 
 #define SOLENOID_CHANNEL 0
 
+bool pat_record;
+
+
+int inside;
+
+// A varible to select the options
+int selected = 1;
+
 // A varible to count recorded samples
 int record_sample = 0;
 
@@ -60,6 +68,8 @@ void control_pressure()
 void setup() 
 {
   Serial.begin(115200);
+
+  load_settings();
 
   // Setup Button OK
   pinMode(OK_BUTTON_PIN, INPUT_PULLUP);
@@ -118,110 +128,131 @@ void loop()
   if (OK_LongPressed)
   {
     OK_LongPressed = false;
-    if(history_flag)
-    {
-      // history_flag = 0;
-      
-      // rot_count = 1;
-      // clear_graph();
-      // menu();
-    }
-    //Serial.println("Long press");
+    inside--;
+    if(inside < 0)
+      inside = 0;
+
+    Serial.print("Long press "); Serial.println(inside);
   }
 
-  if(rot_flag)
+  if (rot_flag)
   {
     rot_flag = false;
-    
-    if(history_flag)
+
+    if(inside == 0)
     {
-      // adjust the counter in a range 0 to MAX_POINTS
-      if (rot_count > MAX_POINTS)
-      {
-        if(current_screen <= record_screens)
-        {
-          if(current_screen != record_screens)
-            current_screen++;
-          
-          rot_count = 0;
-          clear_graph();
-          draw_graph_screen(current_screen, ppg_bp_data, total_record_samples);
-
-        }
-      }
-
-      else if (rot_count < 0)
-      {
-        if(current_screen >= 1)
-        {
-          if(current_screen != 1)
-          {
-            current_screen--;
-            rot_count = MAX_POINTS;
-          }
-          
-          clear_graph();
-          draw_graph_screen(current_screen, ppg_bp_data, total_record_samples);
-        }
-        
-      }
-      
-      // show the indicator, graph and bp value at the particular index
-      int index = rot_count + (current_screen - 1) * MAX_POINTS;
-
-      // To constrain the index in a range 0 to total max points
-      if(index <= total_record_samples && index > 0)
-      {
-        draw_indicator_line(rot_count, 1);
-        show_ppg_bp(rot_count, ppg_bp_data[0][index], ppg_bp_data[1][index]);
-      }
-      else if(index == total_record_samples + 1)
-      {
-        rot_count = rot_count - 1;
-        draw_indicator_line(rot_count, 1);
-      }
-      else if(index <= 0)
-      {
-        rot_count = 0;
-        draw_indicator_line(rot_count, 1);
-      }
-    }
-    else
-    {
-      // adjust the counter in a range 1 to 3
+      // adjust the counter in a range 0 to 3     for selected = 1
       if (rot_count > 3)
-        rot_count = 1;
-      else if (rot_count < 1)
+        rot_count = 0;
+      else if (rot_count < 0)
         rot_count = 3;
-      
+
       menu();
     }
+    else if (inside == 1)
+    {
+      if (selected == 1)
+      {
+        if (history_flag)
+        {
+          // adjust the counter in a range 0 to MAX_POINTS
+          if (rot_count > MAX_POINTS)
+          {
+            if (current_screen <= record_screens)
+            {
+              if (current_screen != record_screens)
+                current_screen++;
+
+              rot_count = 0;
+              clear_graph();
+              draw_graph_screen(current_screen, ppg_bp_data, total_record_samples);
+            }
+          }
+
+          else if (rot_count < 0)
+          {
+            if (current_screen >= 1)
+            {
+              if (current_screen != 1)
+              {
+                current_screen--;
+                rot_count = MAX_POINTS;
+              }
+
+              clear_graph();
+              draw_graph_screen(current_screen, ppg_bp_data, total_record_samples);
+            }
+          }
+
+          // show the indicator, graph and bp value at the particular index
+          int index = rot_count + (current_screen - 1) * MAX_POINTS;
+
+          // To constrain the index in a range 0 to total max points
+          if (index <= total_record_samples && index > 0)
+          {
+            draw_indicator_line(rot_count, 1);
+            show_ppg_bp(rot_count, ppg_bp_data[0][index], ppg_bp_data[1][index]);
+          }
+          else if (index == total_record_samples + 1)
+          {
+            rot_count = rot_count - 1;
+            draw_indicator_line(rot_count, 1);
+          }
+          else if (index <= 0)
+          {
+            rot_count = 0;
+            draw_indicator_line(rot_count, 1);
+          }
+        }
+      }
+      else if (selected == 2)
+      {
+
+            
+      }
+      else if (selected == 3)
+      {
+        if (rot_count > 1)
+          rot_count = 0;
+        else if (rot_count < 0)
+          rot_count = 1;
+        
+        settings_menu();
+      }
+    }
+    if(inside == 2)
+    {
+      if(selected == 3)
+      {
+        if (rot_count > 250)
+          rot_count = 120;
+        else if (rot_count < 120)
+          rot_count = 250;
+
+        change_max_bp();
+      }
+
+    }
   }
-  
+
   if(OK_Pressed)
   {
+    Serial.println("Single Press");
     OK_Pressed = false;
-    if(rot_count == 1)
-    {
-      clear_graph();
-      
-      // Turn off the motor 
-      start_pump = 0;
-      release = 0;
-      digitalWrite(MOTOR_PIN, 0);
 
-      ppg_record = 0;
-      sample = 0;
-      record_sample = 0;
-      history_flag = 0;
-    }
-    else if(rot_count == 2)
+    if(inside == 0)
     {
-      if(ppg_record)
+      if (rot_count == 0)
       {
-        store_extreme();
+        pat_record = 0;
+        // going to home 
+        selected = 0;
+        tft.fillScreen(ILI9341_BLACK);
+        clear_graph();
+        drawAxes();
+        initialize_BP_PPG_display();
 
-        // Turn off the motor 
+        // Turn off the motor
         start_pump = 0;
         release = 0;
         digitalWrite(MOTOR_PIN, 0);
@@ -230,37 +261,117 @@ void loop()
         ledcWrite(SOLENOID_CHANNEL, 0);
 
         ppg_record = 0;
-        history_flag = 1;
-
-        total_record_samples = record_sample;
         sample = 0;
         record_sample = 0;
-        
-        record_screens = ceil((double)total_record_samples/MAX_POINTS);
-
-        // assign last screen to current screen
-        current_screen = record_screens;
-
-        clear_graph();
-        draw_graph_screen(current_screen, ppg_bp_data, total_record_samples);
-        show_ppg_bp(sample, ppg_bp_data[0][total_record_samples], ppg_bp_data[1][total_record_samples]);
-
+        history_flag = 0;
       }
-      else
+      else if (rot_count == 1)
       {
-        ppg_record = 1;
-        start_pump = 1;
-        start_pump_time = millis();
+        selected = 1;
+        if (!pat_record)
+        {
+          tft.fillScreen(ILI9341_BLACK);
+          drawAxes();
+          initialize_BP_PPG_display();
+
+          if (!ppg_record)
+          {
+            ppg_record = 1;
+            start_pump = 1;
+            start_pump_time = millis();
+          }
+          else
+          {
+            pat_record = 1;
+            inside++;
+            store_extreme();
+
+            // Turn off the motor
+            start_pump = 0;
+            release = 0;
+            digitalWrite(MOTOR_PIN, 0);
+
+            // Turn off the Solenoid
+            ledcWrite(SOLENOID_CHANNEL, 0);
+
+            ppg_record = 0;
+            history_flag = 1;
+
+            total_record_samples = record_sample;
+            sample = 0;
+            record_sample = 0;
+
+            record_screens = ceil((double)total_record_samples / MAX_POINTS);
+
+            // assign last screen to current screen
+            current_screen = record_screens;
+
+            clear_graph();
+            draw_graph_screen(current_screen, ppg_bp_data, total_record_samples);
+            show_ppg_bp(sample, ppg_bp_data[0][total_record_samples], ppg_bp_data[1][total_record_samples]);
+            menu();
+          }
+        }
+        else
+        {
+          inside++;
+          tft.fillScreen(ILI9341_BLACK);
+          drawAxes();
+          initialize_BP_PPG_display();
+          draw_graph_screen(current_screen, ppg_bp_data, total_record_samples);
+          show_ppg_bp(sample, ppg_bp_data[0][total_record_samples], ppg_bp_data[1][total_record_samples]);
+        }
+      }
+      else if (rot_count == 2)
+      {
+        inside++;
+        selected = 2;
+        tft.fillScreen(ILI9341_BLACK);
+        drawAxes();
+        report_screen();
+        
+      }
+      else if (rot_count == 3)
+      {
+        inside++;
+        selected = 3;
+        tft.fillScreen(ILI9341_BLACK);
+        drawAxes();
+        setting_screen();
+      }
+      menu();
+    }
+    else if(inside == 1)
+    {
+      if(selected == 2)
+      {
+        inside++;
+      }
+      else if(selected == 3)
+      {
+        inside++;
+
       }
     }
-    else if(rot_count == 3)
+    else if(inside == 2)
     {
-      Serial.println("Report is generated..!");
+      if(selected == 2)
+      {
+        inside--;
+        
+
+      }
+      else if(selected == 3)
+      {
+        inside--;
+        save_settings();
+
+      }
+
     }
-    menu();
   }
 
-  if(!history_flag)
+  if(!history_flag && selected <= 1)
   {
     ppg_value = analogRead(PPG_PIN);
     pressure_hPa = mpr.readPressure();
@@ -275,7 +386,7 @@ void loop()
         start_pump = 0;
       }
 
-      if(bp_value >= 250)
+      if(bp_value >= max_bp)
       {
         digitalWrite(MOTOR_PIN, 0);
         release = 1;
@@ -287,9 +398,6 @@ void loop()
         control_pressure();
       }
       
-
-      
-
       ppg_bp_data[0][record_sample] = ppg_value;
       ppg_bp_data[1][record_sample] = bp_value;
       record_sample++;
@@ -300,7 +408,7 @@ void loop()
     if (sample % 5 == 1)
       show_ppg_bp(sample, ppg_value, bp_value);
 
-    delay(10);    
+    delay(10); // for proper graph flow
   }
 
 }

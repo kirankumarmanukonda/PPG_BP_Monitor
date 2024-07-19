@@ -25,7 +25,7 @@ int X1, Y1;
 // Mapped ppg value according to Graph
 int newValue;
 
-void drawAxes() 
+void drawAxes()
 {
     tft.drawRect(GRAPH_X, GRAPH_Y-1, GRAPH_WIDTH, GRAPH_HEIGHT + 5, ILI9341_BLUE);
   //tft.drawLine(GRAPH_X, GRAPH_Y + GRAPH_HEIGHT, GRAPH_X + GRAPH_WIDTH, GRAPH_Y + GRAPH_HEIGHT, ILI9341_WHITE); // X-axis
